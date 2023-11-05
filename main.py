@@ -8,7 +8,7 @@ class CPU:
         self.ALU = None
 
     def get_cache(self):
-        return cache
+        return self.cache
 
     def add_cache(self, cache):
         if self.cache != None:
@@ -28,7 +28,7 @@ class CPU:
         self.cache = None
 
     def get_memory(self):
-        return cache
+        return self.memory
 
     def add_memory(self, memory):
         if self.memory != None:
@@ -181,6 +181,19 @@ class Cache(Memory):
         self.data[self.current_block] = {'tag': address, 'data': data}
         self.increment_block()
 
+    def flush(self):
+        print(f'Flushing Cache: {self.name}')
+        self.data = [
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None},
+        {'tag': None, 'data': None}
+        ]
+
 class MainMemory(Memory):
     def __init__(self, name):
         super().__init__(name)
@@ -213,8 +226,9 @@ cache.write('apple', 0)
 cache.write('orange', 1)
 cache.write('berry', 4)
 
-cache.read(0)
+print(cache.read(0))
 cache.write('mango', 0)
 
 myCPU.cache.print()
-myCPU.memory.print()
+myCPU.cache.flush()
+myCPU.cache.print()
