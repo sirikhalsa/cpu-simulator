@@ -6,6 +6,9 @@ class CPU:
         self.cache = None
         self.memory = None
         self.ALU = None
+        self.registers = [None for i in range(len(32))]
+        self.HI = None
+        self.LO = None
 
     def get_cache(self):
         return self.cache
@@ -51,7 +54,7 @@ class CPU:
         if self.ALU != None:
             print('Unable to add ALU, ALU already exists')
             return
-        print(f'{ALU.name} added as main memory to {self.name}')
+        print(f'{ALU.name} added as ALU to {self.name}')
         self.ALU = ALU
 
     def remove_ALU(self):
@@ -60,6 +63,70 @@ class CPU:
             return
         print(f'{self.ALU.name} removed as ALU from {self.name}')
         self.ALU = None
+
+    def MIPS_processor(self, instruction):
+        split_instruction = instruction.split(',')
+        si_len = len(split_instruction)
+        opcode = split_instruction[0]
+        if si_len == 1:
+            return None
+        if si_len == 2:
+            rd = split_instruction[1]
+            if opcode == 'MFHI':
+                self.cache.write(self.memory.HI, rd)
+            elif opcode == 'MFLO':
+                self.cache.write(self.memory.LO, rd)
+            elif opcode == 'MTHI':
+                self.memory.HI = self.cache.read(rd)
+            elif opcode == 'MTLO':
+                self.memory.LO = self.cache.read(rd)
+        if si_len == 3:
+            rd = split_instruction[1]
+            rs = self.cache.read(split_instruction[2])
+            if opcode == 'DIV':
+                result = self.ALU.DIV(self.cache.read(rd), rs)
+                self.memory.LO, self.memory.HI = result
+            elif opcode == 'NOT':
+                result = self.ALU.NOT(rs)
+                self.cache.write(result, rd)
+            elif opcode == 'MOVE':
+                self.cache.write(rs, rd)
+            elif opcode == 'NEGU':
+                self.cache.write(neg(rs), rd)
+            elif opcode == 'SW':
+                self.cache.write(split_instruction[2], rd)
+            elif opcode == 'LW':
+                self.cache.read()
+        if si_len == 4:
+            if opcode[-1] == 'I'
+                rd = split_instruction[1]
+                rs = self.cache.read(split_instruction[2])
+                rt = split_instruction[3]
+            else:
+                rd = split_instruction[1]
+                rs = self.cache.read(split_instruction[2])
+                rt = self.cache.read(split_instruction[3])
+            if opcode in ('ADD', 'ADDI'):
+                result = self.ALU.ADD(rs, rt)
+            elif opcode == 'SUB':
+                result = self.ALU.SUB(rs, rt)
+            elif opcode == 'MUL':
+                result = self.ALU.MUL(rs, rt)
+            elif opcode in ('SLT', 'SLTI'):
+                result = rs < rt
+            elif opcode in ('AND', 'ANDI'):
+                result = self.ALU.AND(rs, rt)
+            elif opcode in ('OR', 'ORI'):
+                result = self.ALU.OR(rs, rt)
+            elif opcode in ('XOR', 'XORI'):
+                result = self.ALU.XOR(rs, rt)
+
+            self.cache.write(result, rd)
+
+
+
+
+
 
 class ALU:
     def __init__(self, name):
@@ -100,17 +167,17 @@ class ALU:
           return True
       return False
 
-    def add(self, val1, val2):
-        return val1 + val2
+    def ADD(self, val1, val2):
+        return (val1 + val2)
 
-    def subtract(self, val1, val2):
-        return val1 - val2
+    def SUB(self, val1, val2):
+        return (val1 - val2)
 
-    def multiply(self, val1, val2):
-        return val1 * val2
+    def MUL(self, val1, val2):
+        return (val1 * val2)
 
-    def divide(self, val1, val2):
-        return val1 % val2
+    def DIV(self, val1, val2):
+        return (val1 % val2), rem(val1, val2)
 
 class Memory:
     def __init__(self, name):
@@ -199,6 +266,8 @@ class MainMemory(Memory):
         super().__init__(name)
         self.name = name
         self.data = ['' for i in range(32)]
+        self.HI = None
+        self.LO = None
 
     def __repr__(self):
         return (f'Main Memory: {self.name}')
