@@ -6,7 +6,8 @@ class CPU:
         self.cache = None
         self.memory = None
         self.ALU = None
-        self.registers = [None for i in range(len(32))]
+        self.registers = {'R{}'.format(i): None for i in range(32)}
+        self.registers['R0'] = 0
         self.HI = None
         self.LO = None
 
@@ -64,6 +65,17 @@ class CPU:
         print(f'{self.ALU.name} removed as ALU from {self.name}')
         self.ALU = None
 
+    def write_to_register(self, address, data):
+        print(f' - Writing value: {data} to register: {address}')
+        self.registers[address] = data
+
+    def read_from_register(self, address):
+        print(f' - Reading from register: {address}')
+        return self.registers[address]
+
+    def print_registers(self):
+        print(f'Registers: {self.registers}\n HI: {self.HI}\n LO: {self.LO}')
+
     def MIPS_processor(self, instruction):
         split_instruction = instruction.split(',')
         si_len = len(split_instruction)
@@ -73,60 +85,63 @@ class CPU:
         if si_len == 2:
             rd = split_instruction[1]
             if opcode == 'MFHI':
-                self.cache.write(self.memory.HI, rd)
+                self.write_to_register(rd, self.HI)
             elif opcode == 'MFLO':
-                self.cache.write(self.memory.LO, rd)
+                self.write_to_register(rd, self.LO)
             elif opcode == 'MTHI':
-                self.memory.HI = self.cache.read(rd)
+                self.HI = self.read_from_register(rd)
             elif opcode == 'MTLO':
-                self.memory.LO = self.cache.read(rd)
+                self.LO = self.read_from_register(rd)
+            elif opcode == 'HALT':
+                print('--------Execution Complete--------')
         if si_len == 3:
             rd = split_instruction[1]
-            rs = self.cache.read(split_instruction[2])
+            rs = split_instruction[2]
             if opcode == 'DIV':
-                result = self.ALU.DIV(self.cache.read(rd), rs)
-                self.memory.LO, self.memory.HI = result
+                self.LO, self.HI =  self.ALU.DIV(self.read_from_register(rd), self.read_from_register(rs))
             elif opcode == 'NOT':
-                result = self.ALU.NOT(rs)
-                self.cache.write(result, rd)
+                self.write_to_register(rd, self.ALU(self.read_from_register(rs)))
             elif opcode == 'MOVE':
-                self.cache.write(rs, rd)
+                self.write_to_register(rd, self.read_from_register(rd))
             elif opcode == 'NEGU':
-                self.cache.write(neg(rs), rd)
+                self.write_to_register(rd, neg(self.read_from_register(rd)))
             elif opcode == 'SW':
-                self.cache.write(split_instruction[2], rd)
+                self.cache.write(rd, self.read_from_register(rs))
             elif opcode == 'LW':
-                self.cache.read()
+                self.write_to_register(rd, self.cache.read(rs))
+            elif opcode == 'LI':
+                self.write_to_register(rd, int(rs))
         if si_len == 4:
-            if opcode[-1] == 'I'
+            if opcode[-1] == 'I':
                 rd = split_instruction[1]
-                rs = self.cache.read(split_instruction[2])
-                rt = split_instruction[3]
+                rs = int(self.read_from_register(split_instruction[2]))
+                rt = int(split_instruction[3])
             else:
                 rd = split_instruction[1]
-                rs = self.cache.read(split_instruction[2])
-                rt = self.cache.read(split_instruction[3])
+                rs = int(self.read_from_register(split_instruction[2]))
+                rt = int(self.read_from_register(split_instruction[3]))
             if opcode in ('ADD', 'ADDI'):
+                print(f' - Adding values {rs} and {rt}')
                 result = self.ALU.ADD(rs, rt)
             elif opcode == 'SUB':
+                print(f' - Subtracting values {rt} from {rs}')
                 result = self.ALU.SUB(rs, rt)
             elif opcode == 'MUL':
+                print(f' - Multiplying values {rs} and {rt}')
                 result = self.ALU.MUL(rs, rt)
             elif opcode in ('SLT', 'SLTI'):
+                print(f' - Evaluating {rs} < {rt}')
                 result = rs < rt
             elif opcode in ('AND', 'ANDI'):
+                print(f' - Evaluating {rs} AND {rt}')
                 result = self.ALU.AND(rs, rt)
             elif opcode in ('OR', 'ORI'):
+                print(f' - Evaluating {rs} OR {rt}')
                 result = self.ALU.OR(rs, rt)
             elif opcode in ('XOR', 'XORI'):
+                print(f' - Evaluating {rs} XOR {rt}')
                 result = self.ALU.XOR(rs, rt)
-
-            self.cache.write(result, rd)
-
-
-
-
-
+            self.write_to_register(rd, result)
 
 class ALU:
     def __init__(self, name):
@@ -177,7 +192,7 @@ class ALU:
         return (val1 * val2)
 
     def DIV(self, val1, val2):
-        return (val1 % val2), rem(val1, val2)
+        return divmod(val1, val2)
 
 class Memory:
     def __init__(self, name):
@@ -239,7 +254,7 @@ class Cache(Memory):
         self.increment_block()
         return data
 
-    def write(self, data, address):
+    def write(self, address, data):
         super().write()
         for i in self.data:
             if i['tag'] == address:
@@ -265,9 +280,7 @@ class MainMemory(Memory):
     def __init__(self, name):
         super().__init__(name)
         self.name = name
-        self.data = ['' for i in range(32)]
-        self.HI = None
-        self.LO = None
+        self.data = [None for i in range(16)]
 
     def __repr__(self):
         return (f'Main Memory: {self.name}')
@@ -279,7 +292,7 @@ class MainMemory(Memory):
         super().read()
         return self.data[address]
 
-    def write(self, data, address):
+    def write(self, address, data):
         super().write()
         self.data[address] = data
 
@@ -291,13 +304,13 @@ myCPU.add_cache(cache)
 myCPU.add_memory(memory)
 myCPU.add_ALU(ALU)
 
-cache.write('apple', 0)
-cache.write('orange', 1)
-cache.write('berry', 4)
-
-print(cache.read(0))
-cache.write('mango', 0)
-
-myCPU.cache.print()
-myCPU.cache.flush()
-myCPU.cache.print()
+myCPU.print_registers()
+myCPU.MIPS_processor('LI,R1,4')
+myCPU.MIPS_processor('LI,R2,2')
+myCPU.MIPS_processor('ADDI,R3,R1,6')
+myCPU.MIPS_processor('DIV,R3,R1')
+myCPU.MIPS_processor('MFLO,R4')
+myCPU.MIPS_processor('MFHI,R5')
+myCPU.MIPS_processor('MUL,R6,R4,R5')
+myCPU.MIPS_processor('HALT,;')
+myCPU.print_registers()
