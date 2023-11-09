@@ -66,15 +66,22 @@ class CPU:
         self.ALU = None
 
     def write_to_register(self, address, data):
-        print(f' - Writing value: {data} to register: {address}')
+        print(f' - Register {address} write: {data}')
         self.registers[address] = data
 
     def read_from_register(self, address):
-        print(f' - Reading from register: {address}')
+        print(f' - Register {address} read: {self.registers[address]}')
         return self.registers[address]
 
     def print_registers(self):
         print(f'Registers: {self.registers}\n HI: {self.HI}\n LO: {self.LO}')
+
+    def execute_file(self, file):
+        print('--------Initiating Execution--------')
+        with open(file) as txt_file:
+            instruction_list = txt_file.read().splitlines()
+        for instruction in instruction_list:
+            self.MIPS_processor(instruction)
 
     def MIPS_processor(self, instruction):
         split_instruction = instruction.split(',')
@@ -232,7 +239,7 @@ class Cache(Memory):
             self.current_block += 1
         else:
             self.current_block = 0
-        print(f'Current cache block is: {self.current_block + 1}')
+        print(f' - Current cache block is: {self.current_block + 1}')
 
     def add_memory(self, memory):
         self.main_memory = memory
@@ -241,12 +248,14 @@ class Cache(Memory):
         self.main_memory = None
 
     def read(self, address):
-        super().read()
+        # super().read()
         data = None
         for i in self.data:
             if i['tag'] == address:
-                print('Cache Hit')
+                print(' - Cache Hit', end = '')
+                super().read()
                 data = i['data']
+                print(f'{data} with address: {address}')
                 return data
         print('Cache Miss')
         data = self.main_memory.read(address)
@@ -256,6 +265,7 @@ class Cache(Memory):
 
     def write(self, address, data):
         super().write()
+        print(f'{data} to address: {address}', end = '')
         for i in self.data:
             if i['tag'] == address:
                 self.main_memory.write(i['data'], address)
@@ -288,13 +298,16 @@ class MainMemory(Memory):
     def print(self):
         print(self.data)
 
-    def read(self):
+    def read(self, address):
         super().read()
-        return self.data[address]
+        if self.data[int(address[-1])]:
+            return self.data[address]
+        print('Specified data value does not exist in memory')
+        return None
 
     def write(self, address, data):
         super().write()
-        self.data[address] = data
+        self.data[int(address[-1])] = data
 
 myCPU = CPU()
 cache = Cache('Cache_1')
@@ -304,13 +317,14 @@ myCPU.add_cache(cache)
 myCPU.add_memory(memory)
 myCPU.add_ALU(ALU)
 
-myCPU.print_registers()
-myCPU.MIPS_processor('LI,R1,4')
-myCPU.MIPS_processor('LI,R2,2')
-myCPU.MIPS_processor('ADDI,R3,R1,6')
-myCPU.MIPS_processor('DIV,R3,R1')
-myCPU.MIPS_processor('MFLO,R4')
-myCPU.MIPS_processor('MFHI,R5')
-myCPU.MIPS_processor('MUL,R6,R4,R5')
-myCPU.MIPS_processor('HALT,;')
-myCPU.print_registers()
+# myCPU.print_registers()
+myCPU.execute_file('instructions.txt')
+# myCPU.MIPS_processor('LI,R1,4')
+# myCPU.MIPS_processor('LI,R2,2')
+# myCPU.MIPS_processor('ADDI,R3,R1,6')
+# myCPU.MIPS_processor('DIV,R3,R1')
+# myCPU.MIPS_processor('MFLO,R4')
+# myCPU.MIPS_processor('MFHI,R5')
+# myCPU.MIPS_processor('MUL,R6,R4,R5')
+# myCPU.MIPS_processor('HALT,;')
+# myCPU.print_registers()
